@@ -32,7 +32,7 @@ cd /var/www/
 mkdir dd #or anything except 'uc'
 cd dd
 unzip dd_uc.zip
-sudo cat htaccess_sample ../.htaccess
+sudo cat htaccess_sample >> ../.htaccess
 
 then go to
 
