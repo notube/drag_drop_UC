@@ -1,0 +1,7 @@
+Options +FollowSymlinks
+RewriteEngine On
+
+RewriteRule ^(.*)$ - [T=application/xml]
+RewriteRule /uc/search/global-content-id/(.*) http://localhost:48875/uc/search/global-content-id/$1 [NE,P]
+RewriteRule /(uc/.*)$ http://localhost:48875/$1 [P]
+

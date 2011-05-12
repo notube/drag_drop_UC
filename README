@@ -1,0 +1,50 @@
+This is a rough basic version of a drag and drop html / javscript EPG 
+client for the a Universal Control API-enabled instance of MythTV: 
+https://github.com/bbcrd/UCMythTV/wiki
+
+==Warning==
+
+This is a first pass only! Lots of things are wrong and lots of things 
+don't work properly.
+
+==Before you start==
+
+* make sure mythtv backend is running (if you use the UC mythtv version 
+it should automatically run on starting up the machine)
+
+ps ax | grep myth
+
+* make sure mythtvfrontend is running
+
+/usr/bin/mythfrontend
+
+* make sure UC server is running
+
+/opt/uc/ucserver &
+
+
+==Installation==
+
+This assumes you have apache2 webserver up and running (the UC version 
+of MythTV has this).
+
+cd /var/www/
+mkdir dd #or anything except 'uc'
+cd dd
+unzip dd_uc.zip
+sudo cat htaccess_sample ../.htaccess
+
+then go to
+
+http://machine_ip/dd/
+
+on that machine or another on the local network.
+
+and you should see a 'TV' and a series of boxes with information about 
+what's on on each channel. Drag a programme box to the TV to play it.
+
+
+
+
+
+
