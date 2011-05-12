@@ -1,0 +1,242 @@
+<html>
+  <link type="text/css" href="lib/draggable/lib/development-bundle/themes/ui-lightness/jquery-ui-1.8.10.custom.css" rel="Stylesheet" />
+        <style>
+        .draggable2 { width: 200px; height: 200px; padding: 0.5em; float:left;overflow:hidden}
+        .snaptarget { width: 150px;height: 150px; padding: 0.5em; float:left;}
+        #progs { padding: 0.5em; width: 80% ;  margin-left: auto ;  margin-right: auto ;}
+        </style>
+
+
+  <script id="progs_script"></script>
+  <script type="text/javascript" src="lib/draggable/lib/js/jquery-1.4.4.min.js"></script>
+  <script type="text/javascript" src="lib/draggable/lib/js/jquery-ui-1.8.10.custom.min.js"></script>
+
+  <script type="text/javascript" src='lib/jquery.ui.touch.js'></script>
+
+<script type="text/javascript">
+$(document).ready(function(){
+
+  retrieve_channels();
+ 
+});
+
+
+function retrieve_channels(){
+  $.ajax({
+        type: "GET",
+//	url: "channels.xml",//example of the UC output
+	url: "/uc/source-lists/uc_default",
+	dataType: "xml",
+	success: getchannels
+  });
+  setTimeout("retrieve_channels",300000);
+
+}
+
+function getchannels(xml){
+
+//start the loop
+
+  var channels = [];
+
+//for each source element get the name and store it
+          $(xml).find('source').each(function(){
+             var name = $(this).attr('name');
+             name = name.replace("&","and");
+             var sid = $(this).attr('sid');
+             if(sid.match(/^\d/)){
+               channels.push(name);
+             }
+          });
+
+///now build the json url
+//this should be replaced by uc/search/source-lists/uc_default
+
+  var url = "http://dev.notu.be/2011/04/on_now/epg?channel="+channels.join(",");
+//now add that in and display it
+
+  insert(url, "progs_script");
+
+}
+
+
+function insert(src,id) {
+   var newScript = document.createElement('script');
+   newScript.type = 'text/javascript';
+   newScript.src = src;
+   newScript.id = id;
+   var el = document.getElementById(id);
+   el.parentNode.replaceChild(newScript,el);
+}
+
+function search_results(ob){
+     var html=[];
+
+     for (var i=0; i<ob.length; i++){
+        var cct = ob[i]["core_title"];
+        var crid = ob[i]["crid"];
+        var sst = ob[i]["series_title"];
+        var desc = ob[i]["description"];
+        var image = ob[i]["image"];
+        var ddtt = ob[i]["date_time"];
+        var text_date = ob[i]["text_date"];
+        var channel =ob[i]["channel"];
+        if(channel){
+          channel = channel.replace("&","and");
+        }
+
+        var fulltitle ="";
+
+        if(cct && cct!="" && cct!=" "){
+           if(sst && sst!=""){
+             fulltitle = sst +": "+cct;
+           }else{
+             fulltitle = cct;
+           }    
+        }else{
+           if(sst && sst!=""){
+             fulltitle = sst;
+           }
+        }
+
+
+
+        var pid = ob[i]["pid"];
+        var r_url=crid;
+
+                if(r_url){
+                  html.push("<div id=\""+pid+"\" href=\""+r_url+"\" class=\"ui-widget-content button draggable2\">");
+                  if(image && image!=""){
+                    html.push("<img src=\""+image+"\" width=\"150\"/>");
+                    html.push("<p class=\"p_title\"><b>"+fulltitle+" - "+channel+"</b></p>");
+                  }else{
+                    html.push("<p class=\"p_title\"><b>"+fulltitle+"</b></p>");
+                    html.push("<p><b>"+channel+"</b></p>");
+                  }
+                  html.push("<div clear=\"both\"></div>");
+                  if(desc && desc!=""){
+                    html.push("<span class=\"large\">"+desc+"</span>");
+                  }
+                  html.push("</div>");
+                }
+           
+     }
+     $('#progs').html(html.join(''));
+     refresh();
+
+}
+
+
+
+function refresh(){
+
+        $(function() {
+                $( "#draggable" ).draggable();
+                $( ".draggable2" ).draggable({ opacity: 0.7, helper: "clone"}).addTouch();
+
+                $( ".snaptarget" ).droppable({
+                        drop: function(event, ui) {
+                                var el = $(this);
+                                var el2 = ui.helper;
+                                var prog = el2.attr('id');
+                                var jid = el.attr('id');
+                                var url = el2.attr('href');
+                                var title=el2.find( "p" ).html();
+                                sendProgramme(prog,url,title);
+                                $( this ).addClass( "ui-state-highlight",10,function() {
+                                        setTimeout(function() {
+                                                el.removeClass( "ui-state-highlight" ,100);
+                                        }, 1500 );
+     
+                                });
+
+                        }
+
+                }).addTouch();
+
+        });
+    
+}
+
+
+//touch stuff
+$.extend($.support, {
+        touch: "ontouchend" in document
+});
+
+//
+// Hook up touch events
+//
+$.fn.addTouch = function() {
+        if ($.support.touch) {
+                this.each(function(i,el){
+                        el.addEventListener("touchstart", iPadTouchHandler, false);
+                        el.addEventListener("touchmove", iPadTouchHandler, false);
+                        el.addEventListener("touchend", iPadTouchHandler, false);
+                        el.addEventListener("touchcancel", iPadTouchHandler, false);
+                });
+        }
+};
+
+
+
+function sendProgramme(prog,url,title){
+   $("#telly").find("p").html(title);
+
+//horrible double encoding - see http://www.dracos.co.uk/code/apache-rewrite-problem/
+   var crid = encodeURIComponent(encodeURIComponent(url));
+   var u = "/uc/search/global-content-id/"+crid;
+   $.ajax({
+        type: "GET",
+	url: u,
+	dataType: "xml",
+	success: change_channel,
+        error: function(jqXHR, textStatus, errorThrown){
+          alert(textStatus);
+        }
+   });
+
+}
+
+function change_channel(xml){
+
+    var sid;
+
+          $(xml).find('content').each(function(){
+             sid = $(this).attr('sid');
+          });
+//alert(sid);
+    if(sid){
+//change channel
+       var url = "/uc/outputs/0?sid="+sid;
+//alert(url);
+       $.ajax({
+          type: "POST",
+  	  url: url,
+	  dataType: "xml",
+	  success: channel_changed
+       });
+       
+    }
+}
+
+function channel_changed(xml){
+  alert("ok2");
+}
+
+
+</script>
+<body>
+
+<div class="snaptarget ui-widget-content ui-droppable" id="telly"><div 
+class="center"><img src="tv.png" width="120"></div><p>Nothing currently 
+playing</p></div></div>
+
+<br clear="both"/>
+
+<div id="progs">
+
+</div>
+</body>
+</html>
+

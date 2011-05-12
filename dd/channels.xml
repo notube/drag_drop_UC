@@ -1,0 +1,9 @@
+<response resource="uc/source-lists/uc_default">
+<sources>
+  <source sid="mythtv" name="The MythTV Menus" default-content-id="mainmenu" live="false" linear="false" follow-on="false"/>
+  <source sid="mythgame" name="Games Supported by MythGame" live="false" linear="false" follow-on="false"/>
+  <source sid="externalapps" name="External Applications registered via dbus" live="false" linear="false" follow-on="false"/>
+  <source sid="SG_1" name="Recordings Stored by MythTV" sref="myth:Default@192.168.1.6/var/lib/mythtv/" live="false" linear="false" follow-on="false"/>
+  <source sid="1001" name="BBC ONE" sref="dvb://233a..1041" default-content-id="2011-05-11T14%3a15%3a00Z" live="true" linear="true" follow-on="true" lcn="001"/><source sid="1002" name="BBC TWO" sref="dvb://233a..10bf" default-content-id="2011-05-11T14%3a15%3a00Z" live="true" linear="true" follow-on="true" lcn="002"/><source sid="1003" name="ITV1" sref="dvb://233a..204c" default-content-id="2011-05-11T14%3a00%3a00Z" live="true" linear="true" follow-on="true" lcn="003"/><source sid="1004" name="Channel 4" sref="dvb://233a..20c0" default-content-id="2011-05-11T13%3a05%3a00Z" live="true" linear="true" follow-on="true" lcn="004"/>
+</sources>
+</response>

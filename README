@@ -43,7 +43,16 @@ on that machine or another on the local network.
 and you should see a 'TV' and a series of boxes with information about 
 what's on on each channel. Drag a programme box to the TV to play it.
 
+==Libraries==
 
+It's all down to these libraries:
+
+* jquery drag and drop ui
+http://jqueryui.com/demos/draggable/
+http://jqueryui.com/demos/droppable/
+
+* touch jquery addon  
+http://code.google.com/p/jquery-ui-for-ipad-and-iphone/
 
 
 
