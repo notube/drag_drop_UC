@@ -1,4 +1,5 @@
 <html>
+  <title>NoTube UC EPG: What's on now</title>
   <link type="text/css" href="lib/draggable/lib/development-bundle/themes/ui-lightness/jquery-ui-1.8.10.custom.css" rel="Stylesheet" />
         <style>
         .draggable2 { width: 200px; height: 200px; padding: 0.5em; float:left;overflow:hidden}
@@ -14,9 +15,19 @@
   <script type="text/javascript" src='lib/jquery.ui.touch.js'></script>
 
 <script type="text/javascript">
+
+var channel_names = {};
+var pids = {};
+var data = [];
+var get_pids = true; // flag to use external service to get pids
+
+
 $(document).ready(function(){
 
+//get a list of channels and their names
   retrieve_channels();
+
+  retrieve_channels_data();
  
 });
 
@@ -27,37 +38,88 @@ function retrieve_channels(){
 //	url: "channels.xml",//example of the UC output
 	url: "/uc/source-lists/uc_default",
 	dataType: "xml",
-	success: getchannels
+	success: get_channels_names
   });
-  setTimeout("retrieve_channels",300000);
+  ///setTimeout("retrieve_channels",300000);
 
 }
 
-function getchannels(xml){
+function retrieve_channels_data(){
+  $.ajax({
+        type: "GET",
+//	url: "channels_data.xml",//example of the UC output
+	url: "/uc/search/source-lists/uc_default",
+	dataType: "xml",
+	success: get_channels_data
+  });
+  setTimeout("retrieve_channels_data",300000);
 
-//start the loop
+}
 
-  var channels = [];
+
 
 //for each source element get the name and store it
+
+function get_channels_names(xml){
+          var channels = [];//used only for getting pids
+ 
           $(xml).find('source').each(function(){
              var name = $(this).attr('name');
              name = name.replace("&","and");
              var sid = $(this).attr('sid');
              if(sid.match(/^\d/)){
+               channel_names[sid]=name;
                channels.push(name);
              }
           });
 
-///now build the json url
-//this should be replaced by uc/search/source-lists/uc_default
-
-  var url = "http://dev.notu.be/2011/04/on_now/epg?channel="+channels.join(",");
-//now add that in and display it
-
-  insert(url, "progs_script");
 
 }
+
+
+//for each content element get the sid, id, title atributes
+//and the synopsis
+//look up the name of the channel
+
+function get_channels_data(xml){
+
+          var html=[];
+
+          //this is a bit involved but useful to get the pids
+
+          var crids = [];
+
+          $(xml).find('content').each(function(){
+     
+             var title = $(this).attr('title');
+             var sid = $(this).attr('sid');
+             var crid = $(this).attr('global-content-id');
+             var chan_name = channel_names[sid];
+             if(chan_name){chan_name = chan_name.replace("&","and");}
+             var desc = $(this).find("synopsis").text();
+             if(crid){
+                  data.push({"title":title,"channel":chan_name,"crid":crid,"sid":sid,"synopsis":desc});
+                  crids.push(crid);
+             }
+
+          });
+          
+
+  //notube service to get pids
+  //if you want to skip this, just set the flag "get_pids" above to false
+
+  //curl "http://services.notu.be/resolve?uri\[\]=crid://fp.bbc.co.uk/240z4f&uri\[\]=crid://fp.bbc.co.uk/sq6ql
+  //&noredirect=true&param=results"
+  if(get_pids){
+    var url = "http://services.notu.be/resolve?noredirect=true&param=results&"+crids.join("&uri\[\]=");
+    insert(url, "progs_script");
+  }else{
+    build_html();
+  }
+
+
+}
+
 
 
 function insert(src,id) {
@@ -69,64 +131,55 @@ function insert(src,id) {
    el.parentNode.replaceChild(newScript,el);
 }
 
-function search_results(ob){
-     var html=[];
+function results(ob){
+   for (var i=0; i<ob.length; i++){
+      var pid = ob[i]["pid"];
+      var crid = ob[i]["crid"];
+      if(pid && crid){
+        pids[crid]=pid;
+      }
+   }
 
-     for (var i=0; i<ob.length; i++){
-        var cct = ob[i]["core_title"];
-        var crid = ob[i]["crid"];
-        var sst = ob[i]["series_title"];
-        var desc = ob[i]["description"];
-        var image = ob[i]["image"];
-        var ddtt = ob[i]["date_time"];
-        var text_date = ob[i]["text_date"];
-        var channel =ob[i]["channel"];
-        if(channel){
-          channel = channel.replace("&","and");
-        }
-
-        var fulltitle ="";
-
-        if(cct && cct!="" && cct!=" "){
-           if(sst && sst!=""){
-             fulltitle = sst +": "+cct;
-           }else{
-             fulltitle = cct;
-           }    
-        }else{
-           if(sst && sst!=""){
-             fulltitle = sst;
-           }
-        }
-
-
-
-        var pid = ob[i]["pid"];
-        var r_url=crid;
-
-                if(r_url){
-                  html.push("<div id=\""+pid+"\" href=\""+r_url+"\" class=\"ui-widget-content button draggable2\">");
-                  if(image && image!=""){
-                    html.push("<img src=\""+image+"\" width=\"150\"/>");
-                    html.push("<p class=\"p_title\"><b>"+fulltitle+" - "+channel+"</b></p>");
-                  }else{
-                    html.push("<p class=\"p_title\"><b>"+fulltitle+"</b></p>");
-                    html.push("<p><b>"+channel+"</b></p>");
-                  }
-                  html.push("<div clear=\"both\"></div>");
-                  if(desc && desc!=""){
-                    html.push("<span class=\"large\">"+desc+"</span>");
-                  }
-                  html.push("</div>");
-                }
-           
-     }
-     $('#progs').html(html.join(''));
-     refresh();
-
+   build_html();
 }
 
 
+function build_html(){
+
+   var html=[];
+
+   for (var i=0; i<data.length; i++){
+        var crid = data[i]["crid"];
+        var title = data[i]["title"];
+        var desc = data[i]["synopsis"];
+        var chan_name = data[i]["channel"];
+        var image="";
+        var pid = pids[crid];
+        if(pid){
+          image = "http://www.bbc.co.uk/iplayer/images/episode/"+pid+"_303_170.jpg";
+        }
+
+        html.push("<div id=\""+crid+"\" href=\""+crid+"\" class=\"ui-widget-content button draggable2\">");
+        if(image && image!=""){
+                    html.push("<img src=\""+image+"\" width=\"150\"/>");
+                    html.push("<p class=\"p_title\"><b><a target=\"_blank\" href=\"http://www.bbc.co.uk/programmes/"+pid+"\">"+title+" - "+chan_name+"</a></b></p>");
+        }else{
+                    html.push("<p class=\"p_title\"><b>"+title+"</b></p>");
+                    html.push("<p><b>"+chan_name+"</b></p>");
+        }
+        html.push("<div clear=\"both\"></div>");
+        if(desc && desc!=""){
+            html.push("<span class=\"large\">"+desc+"</span>");
+        }
+        html.push("</div>");
+
+   }
+
+   $('#progs').html(html.join(''));
+   refresh();
+
+
+}
 
 function refresh(){
 
